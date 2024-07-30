@@ -49,9 +49,8 @@ public class SwiftSfmcPlugin: NSObject, FlutterPlugin {
                     } else {
                         isInitSuccessful = false
                     }
+                    result(isInitSuccessful)
                 })
-            
-            result(isInitSuccessful)
         }else if call.method == "setContactKey" {
             guard let args = call.arguments as? [String : Any] else {return}
             let cKey = args["contactKey"] as! String?
@@ -153,14 +152,14 @@ public class SwiftSfmcPlugin: NSObject, FlutterPlugin {
     
     // MobilePush SDK: REQUIRED IMPLEMENTATION
     
-    public func setupSFMC(appId: String, accessToken: String, mid: String, sfmcURL: String, delayRegistration: Bool, analytics: Bool, onDone: (_ result: Bool, _ message: String?, _ code: Int?) -> Void) {
+    public func setupSFMC(appId: String, accessToken: String, mid: String, sfmcURL: String, delayRegistration: Bool, analytics: Bool, onDone: @escaping (_ result: Bool, _ message: String?, _ code: Int?) -> Void) {
         
         // Enable logging for debugging early on. Debug level is not recommended for production apps, as significant data
         // about the MobilePush will be logged to the console.
 #if DEBUG
         SFMCSdk.setLogger(logLevel: .debug)
 #endif
-        
+
         //Throws fatal error when appId, accessToken, appEndpoint and mid not added to the project
         if(appId.contains("<your") ||
            accessToken.contains("<your") ||
@@ -168,21 +167,18 @@ public class SwiftSfmcPlugin: NSObject, FlutterPlugin {
            mid.contains("<your")) {
             fatalError(" Please add proper appID, accessToken, appEndPoint and mid")
         }
-        
+
         //Throws fatal error when MarketingCloudSDK.bundle is not added to project bundle resources
         guard Bundle.main.path(forResource: "MarketingCloudSDK", ofType: "bundle") != nil else {
             print("The path could not be created.")
             fatalError("Please add MarketingCloudSDK.bundle to the project's bundle resources!")
         }
-        
+
         let appEndpoint = URL(string: sfmcURL)!
-        
         // To override the Keycahin accessibility attribute
         SFMCSdk.setKeychainAccessibleAttribute(accessibleAttribute: kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
-        
         // To Override the Keychain Error to be considered fatal or not (Default value is true)
         SFMCSdk.setKeychainAccessErrorsAreFatal(errorsAreFatal: false)
-        
         // Use the Mobille Push Config Builder to configure the Mobile Push Module. This gives you the maximum flexibility in SDK configuration.
         // The builder lets you configure the module parameters at runtime.
         let mobilePushConfiguration = PushConfigBuilder(appId: appId)
@@ -192,9 +188,7 @@ public class SwiftSfmcPlugin: NSObject, FlutterPlugin {
             .setDelayRegistrationUntilContactKeyIsSet(delayRegistration)
             .setAnalyticsEnabled(analytics)
             .build()
-        
         var isInitSuccessful = false;
-        
         // Set the completion handler to take action when module initialization is completed. Result indicates if initialization was sucesfull or not.
         let completionHandler: (OperationResult) -> () = { result in
             if result == .success {
@@ -208,11 +202,11 @@ public class SwiftSfmcPlugin: NSObject, FlutterPlugin {
             } else if result == .timeout {
                 // module failed to initialize due to timeout, check logs for more details
             }
+            onDone(isInitSuccessful, nil,nil)
         }
         
         // Once you've created the mobile push configuration, intialize the SDK.
         SFMCSdk.initializeSdk(ConfigBuilder().setPush(config: mobilePushConfiguration, onCompletion: completionHandler).build())
-        onDone(isInitSuccessful, nil, nil);
     }
     
     func setupMobilePush() {
